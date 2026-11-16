@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Board from './components/board/Board.jsx'
 import PerformancePanel from './components/ui/PerformancePanel.jsx'
 import CameraSettings from './components/scene/CameraSettings.jsx'
@@ -16,6 +16,11 @@ import './App.css'
 
 const emptyBoard = () => Array(9).fill(null)
 const initialPerformanceStats = { fps: 0, frameTime: 0, calls: 0, triangles: 0 }
+const MOBILE_DPR = [1, 1.75]
+const TABLET_DPR = [1, 1.75]
+const DESKTOP_DPR = [1, 2]
+const CAMERA_OPTIONS = { position: INITIAL_CAMERA.position, fov: 42, near: 0.1, far: 24 }
+const WEBGL_OPTIONS = { antialias: true, alpha: false, powerPreference: 'high-performance' }
 const getResponsivePlayZoom = () => Math.max(
   0.65,
   Math.min(
@@ -24,6 +29,11 @@ const getResponsivePlayZoom = () => Math.max(
     ((window.innerWidth || 375) / 500) * 1.2,
   ),
 )
+const getRenderDpr = () => {
+  if (window.innerWidth <= 480) return MOBILE_DPR
+  if (window.innerWidth <= 900) return TABLET_DPR
+  return DESKTOP_DPR
+}
 
 export default function App() {
   const initialGameState = window.innerWidth <= 900 ? 'playing' : 'idle'
@@ -41,11 +51,12 @@ export default function App() {
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 })
   const [cameraTransitionKey, setCameraTransitionKey] = useState(0)
   const [performanceStats, setPerformanceStats] = useState(initialPerformanceStats)
+  const [renderDpr, setRenderDpr] = useState(getRenderDpr)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [theme, setTheme] = useState('light')
   const sceneBackground = theme === 'dark' ? '#111820' : '#8ed8ff'
 
-  const startNewGame = () => {
+  const startNewGame = useCallback(() => {
     if (soundEnabled) playBoardEntranceSound()
     setMarks(emptyBoard())
     setCurrentPlayer('X')
@@ -57,7 +68,13 @@ export default function App() {
     setLastMove(null)
     setVictory(null)
     setDrawAnimationKey(0)
-  }
+  }, [soundEnabled])
+
+  useEffect(() => {
+    const updateDpr = () => setRenderDpr(getRenderDpr())
+    window.addEventListener('resize', updateDpr)
+    return () => window.removeEventListener('resize', updateDpr)
+  }, [])
 
   useEffect(() => {
     if (gameState === 'idle') return undefined
@@ -76,7 +93,7 @@ export default function App() {
     }
   }, [gameState])
 
-  const playCell = (cell) => {
+  const playCell = useCallback((cell) => {
     if (gameState === 'idle') return
     if (gameState !== 'playing' || marks[cell]) return
 
@@ -101,17 +118,29 @@ export default function App() {
     } else {
       setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X')
     }
-  }
+  }, [currentPlayer, gameState, marks, soundEnabled])
 
   return (
     <main className={`game-screen${theme === 'dark' ? ' game-screen-dark' : ''}${gameState !== 'idle' ? ' game-screen-in-game' : ''}`} aria-label="3D tic-tac-toe game">
-      <Canvas shadows dpr={[1, 2]} camera={{ position: INITIAL_CAMERA.position, fov: 42 }} gl={{ antialias: true }}>
+      <Canvas shadows dpr={renderDpr} camera={CAMERA_OPTIONS} gl={WEBGL_OPTIONS}>
         <CameraSettings settings={cameraSettings} transitionKey={cameraTransitionKey} />
         <PerformanceSampler onUpdate={setPerformanceStats} />
         <color attach="background" args={[sceneBackground]} />
         <fog attach="fog" args={[sceneBackground, 12, 24]} />
         <ambientLight intensity={1.5} />
-        <directionalLight castShadow position={[4, 8, 5]} intensity={2.4} shadow-mapSize={1024} />
+        <directionalLight
+          castShadow
+          position={[4, 8, 5]}
+          intensity={2.4}
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+          shadow-camera-left={-6}
+          shadow-camera-right={6}
+          shadow-camera-top={6}
+          shadow-camera-bottom={-6}
+          shadow-camera-near={0.1}
+          shadow-camera-far={24}
+        />
         <Board
           marks={marks}
           gameActive={gameState !== 'idle'}

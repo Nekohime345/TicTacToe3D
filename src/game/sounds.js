@@ -39,7 +39,7 @@ export function playBoardEntranceSound() {
       endFrequency: 130 + index * 12,
       startTime: startTime + index * 0.11,
       duration: 0.1,
-      volume: 0.025,
+      volume: 0.07,
       type: 'triangle',
     })
   }
@@ -55,7 +55,7 @@ export function playMoveSound(mark) {
     frequency: baseFrequency,
     startTime,
     duration: 0.16,
-    volume: 0.055,
+    volume: 0.16,
     type: mark === 'X' ? 'triangle' : 'sine',
   })
 
@@ -66,7 +66,7 @@ export function playMoveSound(mark) {
       frequency: baseFrequency * (0.72 - index * 0.08),
       startTime: startTime + delay,
       duration: 0.12,
-      volume: 0.012,
+      volume: 0.035,
       type: 'sine',
     })
   })
@@ -82,7 +82,7 @@ export function playWinSound(mark) {
     endFrequency: 55,
     startTime,
     duration: 0.5,
-    volume: 0.12,
+    volume: 0.3,
     type: 'sine',
   })
 
@@ -92,7 +92,7 @@ export function playWinSound(mark) {
       frequency,
       startTime: startTime + 0.08 + index * 0.12,
       duration: 0.24,
-      volume: 0.035,
+      volume: 0.11,
       type: 'triangle',
     })
   })
@@ -108,7 +108,7 @@ export function playDrawSound() {
     endFrequency: 38,
     startTime,
     duration: 0.58,
-    volume: 0.15,
+    volume: 0.32,
     type: 'sine',
   })
   playTone(context, {
@@ -116,7 +116,7 @@ export function playDrawSound() {
     endFrequency: 70,
     startTime: startTime + 0.025,
     duration: 0.32,
-    volume: 0.045,
+    volume: 0.12,
     type: 'triangle',
   })
 }

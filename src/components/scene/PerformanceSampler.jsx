@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useRef } from 'react'
+import { memo, useRef } from 'react'
 
 function PerformanceSampler({ onUpdate }) {
   const elapsed = useRef(0)
@@ -24,4 +24,4 @@ function PerformanceSampler({ onUpdate }) {
   return null
 }
 
-export default PerformanceSampler
+export default memo(PerformanceSampler)

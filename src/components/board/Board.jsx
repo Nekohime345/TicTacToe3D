@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
-import { AdditiveBlending, BoxGeometry, CanvasTexture, Color, EdgesGeometry, MeshBasicMaterial, Object3D, Path, Shape, SRGBColorSpace } from 'three'
-import { useEffect, useMemo, useRef } from 'react'
+import { AdditiveBlending, BoxGeometry, CanvasTexture, Color, EdgesGeometry, ExtrudeGeometry, LineBasicMaterial, MeshBasicMaterial, MeshStandardMaterial, Object3D, Path, Shape, SRGBColorSpace } from 'three'
+import { memo, useEffect, useMemo, useRef } from 'react'
 import { BOARD_CELLS, SAMPLE_MARKS } from '../../game/constants.js'
 
 const oShape = new Shape()
@@ -8,8 +8,30 @@ oShape.absarc(0, 0, 0.34, 0, Math.PI * 2, false)
 const oHole = new Path()
 oHole.absarc(0, 0, 0.19, 0, Math.PI * 2, true)
 oShape.holes.push(oHole)
+const tileGeometry = new BoxGeometry(1, 0.22, 1)
 const tileOutlineGeometry = new EdgesGeometry(new BoxGeometry(1.012, 0.232, 1.012))
+const tileMaterials = {
+  light: new MeshStandardMaterial({ color: '#f8fbff', roughness: 0.38 }),
+  dark: new MeshStandardMaterial({ color: '#2E3339', roughness: 0.38 }),
+}
+const tileOutlineMaterials = {
+  light: new LineBasicMaterial({ color: '#526b80', transparent: true, opacity: 0.9, toneMapped: false }),
+  dark: new LineBasicMaterial({ color: '#b9e5ff', transparent: true, opacity: 0.9, toneMapped: false }),
+}
+const markBarGeometry = new BoxGeometry(0.19, 0.16, 0.78)
+const markBarMaterial = new MeshStandardMaterial({ color: '#ff6b6b', roughness: 0.32 })
+const oGeometry = new ExtrudeGeometry(oShape, { depth: 0.16, bevelEnabled: false, curveSegments: 32 })
+const oMaterial = new MeshStandardMaterial({ color: '#226fe8', roughness: 0.42 })
 const DRAW_TEXT_LANDING_HEIGHT = 0.28
+const DRAW_IMPACT_DELAY = 0.78
+const impactDistances = BOARD_CELLS.map((impactCell) => {
+  const impactRow = Math.floor(impactCell / 3)
+  const impactColumn = impactCell % 3
+  return BOARD_CELLS.map((cell) => Math.hypot(
+    Math.floor(cell / 3) - impactRow,
+    cell % 3 - impactColumn,
+  ))
+})
 const victoryParticles = Array.from({ length: 28 }, (_, index) => {
   const angle = (index / 28) * Math.PI * 2
   return { x: Math.cos(angle), z: Math.sin(angle), speed: 2.8 + (index % 5) * 0.42, lift: 2.5 + (index % 4) * 0.32 }
@@ -41,6 +63,8 @@ function Cell({ row, column, index, animationKey, impactKey, impactCell, victory
   const startY = 1.8 + (index % 3) * 0.35
   const startZ = targetZ + Math.cos(index * 1.4 + 0.2) * 1.7
   const startRotation = (index % 2 === 0 ? 1 : -1) * 0.65
+  const phaseOffset = (row + column) * 0.65
+  const centerDistance = Math.hypot(row - 1, column - 1)
 
   useEffect(() => {
     entranceStart.current = null
@@ -60,15 +84,13 @@ function Cell({ row, column, index, animationKey, impactKey, impactCell, victory
 
   useFrame(({ clock }) => {
     const time = clock.elapsedTime
-    const phase = time * 1.6 - (row + column) * 0.65
+    const phase = time * 1.6 - phaseOffset
     const cell = cellRef.current
     let impactLift = 0
 
     if (impactKey > 0 && impactCell !== null) {
       if (impactStart.current === null) impactStart.current = time
-      const impactRow = Math.floor(impactCell / 3)
-      const impactColumn = impactCell % 3
-      const distance = Math.hypot(row - impactRow, column - impactColumn)
+      const distance = impactDistances[impactCell][index]
       const localTime = time - impactStart.current - distance * 0.11
       if (localTime >= 0 && localTime < 0.8) impactLift = Math.sin(localTime * 15) * Math.exp(-localTime * 3.6) * 0.2
     }
@@ -76,9 +98,8 @@ function Cell({ row, column, index, animationKey, impactKey, impactCell, victory
     const finaleKey = drawKey || victoryKey
     if (finaleKey > 0) {
       if (victoryStart.current === null) victoryStart.current = time
-      const distance = Math.hypot(row - 1, column - 1)
-      const delay = drawKey > 0 ? 0 : 0.78
-      const localTime = time - victoryStart.current - delay - distance * 0.045
+      const delay = drawKey > 0 ? DRAW_IMPACT_DELAY : 0.78
+      const localTime = time - victoryStart.current - delay - centerDistance * 0.045
       if (localTime >= 0 && localTime < 1) {
         impactLift += Math.sin(localTime * 21) * Math.exp(-localTime * 2.2) * (drawKey > 0 ? 1.15 : 0.9)
       }
@@ -100,6 +121,8 @@ function Cell({ row, column, index, animationKey, impactKey, impactCell, victory
   return (
     <mesh
       ref={cellRef}
+      geometry={tileGeometry}
+      material={tileMaterials[theme]}
       position={[targetX, 0, targetZ]}
       onClick={(event) => {
         event.stopPropagation()
@@ -107,38 +130,33 @@ function Cell({ row, column, index, animationKey, impactKey, impactCell, victory
       }}
       castShadow
       receiveShadow
+      dispose={null}
     >
-      <boxGeometry args={[1, 0.22, 1]} />
-      <meshStandardMaterial color={theme === 'dark' ? '#2E3339' : '#f8fbff'} roughness={0.38} />
-      <lineSegments geometry={tileOutlineGeometry} raycast={() => null}>
-        <lineBasicMaterial
-          color={theme === 'dark' ? '#b9e5ff' : '#526b80'}
-          transparent
-          opacity={0.9}
-          toneMapped={false}
-        />
-      </lineSegments>
+      <lineSegments
+        geometry={tileOutlineGeometry}
+        material={tileOutlineMaterials[theme]}
+        raycast={() => null}
+        dispose={null}
+      />
     </mesh>
   )
 }
 
 function MarkShape({ type }) {
   return type === 'X' ? (
-    <group position={[0, 0.22, 0]}>
-      <mesh rotation={[0, Math.PI / 4, 0]} castShadow>
-        <boxGeometry args={[0.19, 0.16, 0.78]} />
-        <meshStandardMaterial color="#ff6b6b" roughness={0.32} />
-      </mesh>
-      <mesh rotation={[0, -Math.PI / 4, 0]} castShadow>
-        <boxGeometry args={[0.19, 0.16, 0.78]} />
-        <meshStandardMaterial color="#ff6b6b" roughness={0.32} />
-      </mesh>
+    <group position={[0, 0.22, 0]} dispose={null}>
+      <mesh geometry={markBarGeometry} material={markBarMaterial} rotation={[0, Math.PI / 4, 0]} castShadow />
+      <mesh geometry={markBarGeometry} material={markBarMaterial} rotation={[0, -Math.PI / 4, 0]} castShadow />
     </group>
   ) : (
-    <mesh position={[0, 0.11, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow>
-      <extrudeGeometry args={[oShape, { depth: 0.16, bevelEnabled: false, curveSegments: 32 }]} />
-      <meshStandardMaterial color="#226fe8" roughness={0.42} />
-    </mesh>
+    <mesh
+      geometry={oGeometry}
+      material={oMaterial}
+      position={[0, 0.11, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      castShadow
+      dispose={null}
+    />
   )
 }
 
@@ -162,7 +180,7 @@ function Mark({ row, column, index, type, impact = false, victoryKey = 0, drawKe
     if (finaleKey > 0) {
       if (victoryStart.current === null) victoryStart.current = clock.elapsedTime
       const timeSinceWin = clock.elapsedTime - victoryStart.current
-      const launchDelay = isDraw ? 0 : 0.78
+      const launchDelay = isDraw ? DRAW_IMPACT_DELAY : 0.78
 
       if (timeSinceWin >= launchDelay) {
         if (!physics.current) {
@@ -220,6 +238,7 @@ function Mark({ row, column, index, type, impact = false, victoryKey = 0, drawKe
   return (
     <group
       ref={markRef}
+      dispose={null}
       scale={impact ? 0.12 : 1}
       position={[(column - 1) * 1.08, 0, (row - 1) * 1.08]}
     >
@@ -258,7 +277,7 @@ function FallingWinnerMark({ type }) {
   })
 
   return (
-    <group ref={markRef} position={[0, 5.5, 0]} scale={2.6}>
+    <group ref={markRef} position={[0, 5.5, 0]} scale={2.6} dispose={null}>
       <MarkShape type={type} />
     </group>
   )
@@ -314,8 +333,7 @@ function FallingDrawText() {
     const impactTime = clock.elapsedTime - startTime.current
     const bounce = Math.exp(-impactTime * 13) * Math.cos(impactTime * 19)
     text.scale.set(1 + Math.max(0, bounce) * 0.12, 1, 1 - Math.max(0, bounce) * 0.18)
-    textMaterialRef.current.opacity = Math.max(0, 1 - impactTime / 2.4)
-    text.visible = impactTime < 2.4
+    textMaterialRef.current.opacity = 1
   })
 
   return (
@@ -407,7 +425,7 @@ function VictoryEffects({ type, delay = 0.78 }) {
   )
 }
 
-export default function Board({ marks, gameActive, animationKey, lastMove, victory, drawKey = 0, theme = 'light', onCellClick }) {
+function Board({ marks, gameActive, animationKey, lastMove, victory, drawKey = 0, theme = 'light', onCellClick }) {
   return (
     <group>
       {BOARD_CELLS.map((cell) => {
@@ -448,10 +466,12 @@ export default function Board({ marks, gameActive, animationKey, lastMove, victo
       {drawKey > 0 && (
         <group key={`draw-${drawKey}`}>
           <FallingDrawText />
-          <VictoryEffects type="draw" delay={0.78} />
+          <VictoryEffects type="draw" delay={DRAW_IMPACT_DELAY} />
         </group>
       )}
     </group>
   )
 }
+
+export default memo(Board)
 

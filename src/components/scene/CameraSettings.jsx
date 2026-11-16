@@ -1,5 +1,5 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
 
 function CameraSettings({ settings, transitionKey }) {
   const { camera } = useThree()
@@ -37,13 +37,19 @@ function CameraSettings({ settings, transitionKey }) {
     const eased = progress * progress * (3 - 2 * progress)
 
     camera.position.set(
-      ...transition.fromPosition.map((value, index) => value + (transition.toPosition[index] - value) * eased),
+      transition.fromPosition[0] + (transition.toPosition[0] - transition.fromPosition[0]) * eased,
+      transition.fromPosition[1] + (transition.toPosition[1] - transition.fromPosition[1]) * eased,
+      transition.fromPosition[2] + (transition.toPosition[2] - transition.fromPosition[2]) * eased,
     )
     camera.rotation.set(
-      ...transition.fromRotation.map((value, index) => value + (transition.toRotation[index] - value) * eased),
+      transition.fromRotation[0] + (transition.toRotation[0] - transition.fromRotation[0]) * eased,
+      transition.fromRotation[1] + (transition.toRotation[1] - transition.fromRotation[1]) * eased,
+      transition.fromRotation[2] + (transition.toRotation[2] - transition.fromRotation[2]) * eased,
     )
-    camera.zoom = transition.fromZoom + (transition.toZoom - transition.fromZoom) * eased
-    camera.updateProjectionMatrix()
+    if (transition.fromZoom !== transition.toZoom) {
+      camera.zoom = transition.fromZoom + (transition.toZoom - transition.fromZoom) * eased
+      camera.updateProjectionMatrix()
+    }
 
     if (progress >= 1) transitionRef.current = null
   })
@@ -51,4 +57,4 @@ function CameraSettings({ settings, transitionKey }) {
   return null
 }
 
-export default CameraSettings
+export default memo(CameraSettings)
