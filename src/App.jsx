@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import Board from './components/board/Board.jsx'
 import PerformancePanel from './components/ui/PerformancePanel.jsx'
 import CameraSettings from './components/scene/CameraSettings.jsx'
@@ -35,6 +35,62 @@ const getRenderDpr = () => {
   return DESKTOP_DPR
 }
 
+const GameScene = memo(function GameScene({
+  cameraSettings,
+  cameraTransitionKey,
+  renderDpr,
+  pageVisible,
+  sceneBackground,
+  gameActive,
+  boardAnimationKey,
+  lastMove,
+  victory,
+  drawAnimationKey,
+  theme,
+  marks,
+  onCellClick,
+  onPerformanceUpdate,
+}) {
+  return (
+    <Canvas
+      shadows
+      frameloop={pageVisible ? 'always' : 'never'}
+      dpr={renderDpr}
+      camera={CAMERA_OPTIONS}
+      gl={WEBGL_OPTIONS}
+    >
+      <CameraSettings settings={cameraSettings} transitionKey={cameraTransitionKey} />
+      <PerformanceSampler onUpdate={onPerformanceUpdate} pageVisible={pageVisible} />
+      <color attach="background" args={[sceneBackground]} />
+      <fog attach="fog" args={[sceneBackground, 12, 24]} />
+      <ambientLight intensity={1.5} />
+      <directionalLight
+        castShadow
+        position={[4, 8, 5]}
+        intensity={2.4}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-camera-left={-6}
+        shadow-camera-right={6}
+        shadow-camera-top={6}
+        shadow-camera-bottom={-6}
+        shadow-camera-near={0.1}
+        shadow-camera-far={24}
+      />
+      <Board
+        marks={marks}
+        gameActive={gameActive}
+        animationKey={boardAnimationKey}
+        lastMove={lastMove}
+        victory={victory}
+        drawKey={drawAnimationKey}
+        theme={theme}
+        onCellClick={onCellClick}
+      />
+    </Canvas>
+  )
+})
+
 export default function App() {
   const initialGameState = window.innerWidth <= 900 ? 'playing' : 'idle'
   const [cameraSettings, setCameraSettings] = useState(() => initialGameState === 'idle'
@@ -52,6 +108,7 @@ export default function App() {
   const [cameraTransitionKey, setCameraTransitionKey] = useState(0)
   const [performanceStats, setPerformanceStats] = useState(initialPerformanceStats)
   const [renderDpr, setRenderDpr] = useState(getRenderDpr)
+  const [pageVisible, setPageVisible] = useState(() => document.visibilityState === 'visible')
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [theme, setTheme] = useState('light')
   const sceneBackground = theme === 'dark' ? '#111820' : '#8ed8ff'
@@ -74,6 +131,12 @@ export default function App() {
     const updateDpr = () => setRenderDpr(getRenderDpr())
     window.addEventListener('resize', updateDpr)
     return () => window.removeEventListener('resize', updateDpr)
+  }, [])
+
+  useEffect(() => {
+    const updateVisibility = () => setPageVisible(document.visibilityState === 'visible')
+    document.addEventListener('visibilitychange', updateVisibility)
+    return () => document.removeEventListener('visibilitychange', updateVisibility)
   }, [])
 
   useEffect(() => {
@@ -122,36 +185,22 @@ export default function App() {
 
   return (
     <main className={`game-screen${theme === 'dark' ? ' game-screen-dark' : ''}${gameState !== 'idle' ? ' game-screen-in-game' : ''}`} aria-label="3D tic-tac-toe game">
-      <Canvas shadows dpr={renderDpr} camera={CAMERA_OPTIONS} gl={WEBGL_OPTIONS}>
-        <CameraSettings settings={cameraSettings} transitionKey={cameraTransitionKey} />
-        <PerformanceSampler onUpdate={setPerformanceStats} />
-        <color attach="background" args={[sceneBackground]} />
-        <fog attach="fog" args={[sceneBackground, 12, 24]} />
-        <ambientLight intensity={1.5} />
-        <directionalLight
-          castShadow
-          position={[4, 8, 5]}
-          intensity={2.4}
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-          shadow-camera-left={-6}
-          shadow-camera-right={6}
-          shadow-camera-top={6}
-          shadow-camera-bottom={-6}
-          shadow-camera-near={0.1}
-          shadow-camera-far={24}
-        />
-        <Board
-          marks={marks}
-          gameActive={gameState !== 'idle'}
-          animationKey={boardAnimationKey}
-          lastMove={lastMove}
-          victory={victory}
-          drawKey={drawAnimationKey}
-          theme={theme}
-          onCellClick={playCell}
-        />
-      </Canvas>
+      <GameScene
+        cameraSettings={cameraSettings}
+        cameraTransitionKey={cameraTransitionKey}
+        renderDpr={renderDpr}
+        pageVisible={pageVisible}
+        sceneBackground={sceneBackground}
+        gameActive={gameState !== 'idle'}
+        boardAnimationKey={boardAnimationKey}
+        lastMove={lastMove}
+        victory={victory}
+        drawAnimationKey={drawAnimationKey}
+        theme={theme}
+        marks={marks}
+        onCellClick={playCell}
+        onPerformanceUpdate={setPerformanceStats}
+      />
 
       <div className="left-content">
         <header className="game-heading">
