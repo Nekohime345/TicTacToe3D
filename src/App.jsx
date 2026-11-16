@@ -93,6 +93,7 @@ export default function App() {
     : { ...PLAY_CAMERA, zoom: getResponsivePlayZoom() })
   const [marks, setMarks] = useState(emptyBoard)
   const [currentPlayer, setCurrentPlayer] = useState('X')
+  const [nextStartingPlayer, setNextStartingPlayer] = useState(() => window.innerWidth <= 900 ? 'O' : 'X')
   const [gameState, setGameState] = useState(initialGameState)
   const [winner, setWinner] = useState(null)
   const [boardAnimationKey, setBoardAnimationKey] = useState(0)
@@ -110,7 +111,8 @@ export default function App() {
   const startNewGame = useCallback(() => {
     if (soundEnabled) playBoardEntranceSound()
     setMarks(emptyBoard())
-    setCurrentPlayer('X')
+    setCurrentPlayer(nextStartingPlayer)
+    setNextStartingPlayer(nextStartingPlayer === 'X' ? 'O' : 'X')
     setWinner(null)
     setGameState('playing')
     setCameraSettings({ ...PLAY_CAMERA, zoom: getResponsivePlayZoom() })
@@ -119,7 +121,7 @@ export default function App() {
     setLastMove(null)
     setVictory(null)
     setDrawAnimationKey(0)
-  }, [soundEnabled])
+  }, [nextStartingPlayer, soundEnabled])
 
   useEffect(() => {
     const updateDpr = () => setRenderDpr(getRenderDpr())
