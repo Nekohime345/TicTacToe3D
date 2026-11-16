@@ -1,9 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { memo, useCallback, useEffect, useState } from 'react'
 import Board from './components/board/Board.jsx'
-import PerformancePanel from './components/ui/PerformancePanel.jsx'
 import CameraSettings from './components/scene/CameraSettings.jsx'
-import PerformanceSampler from './components/scene/PerformanceSampler.jsx'
 import { INITIAL_CAMERA, INITIAL_ZOOM, PLAY_CAMERA } from './game/constants.js'
 import { findWinner, isBoardFull } from './game/gameLogic.js'
 import {
@@ -15,7 +13,6 @@ import {
 import './App.css'
 
 const emptyBoard = () => Array(9).fill(null)
-const initialPerformanceStats = { fps: 0, frameTime: 0, calls: 0, triangles: 0 }
 const MOBILE_DPR = [1, 1.75]
 const TABLET_DPR = [1, 1.75]
 const DESKTOP_DPR = [1, 2]
@@ -49,7 +46,6 @@ const GameScene = memo(function GameScene({
   theme,
   marks,
   onCellClick,
-  onPerformanceUpdate,
 }) {
   return (
     <Canvas
@@ -60,7 +56,6 @@ const GameScene = memo(function GameScene({
       gl={WEBGL_OPTIONS}
     >
       <CameraSettings settings={cameraSettings} transitionKey={cameraTransitionKey} />
-      <PerformanceSampler onUpdate={onPerformanceUpdate} pageVisible={pageVisible} />
       <color attach="background" args={[sceneBackground]} />
       <fog attach="fog" args={[sceneBackground, 12, 24]} />
       <ambientLight intensity={1.5} />
@@ -106,7 +101,6 @@ export default function App() {
   const [drawAnimationKey, setDrawAnimationKey] = useState(0)
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 })
   const [cameraTransitionKey, setCameraTransitionKey] = useState(0)
-  const [performanceStats, setPerformanceStats] = useState(initialPerformanceStats)
   const [renderDpr, setRenderDpr] = useState(getRenderDpr)
   const [pageVisible, setPageVisible] = useState(() => document.visibilityState === 'visible')
   const [soundEnabled, setSoundEnabled] = useState(true)
@@ -199,7 +193,6 @@ export default function App() {
         theme={theme}
         marks={marks}
         onCellClick={playCell}
-        onPerformanceUpdate={setPerformanceStats}
       />
 
       <div className="left-content">
@@ -232,6 +225,7 @@ export default function App() {
               <span aria-hidden="true">{theme === 'dark' ? '\u2600' : '\u263e'}</span>
               <span className="theme-toggle-label">{theme === 'dark' ? 'Light' : 'Dark'}</span>
             </button>
+            <p className="creator-credit">Made by Kiro D. Basanal</p>
           </footer>
         )}
       </div>
@@ -243,8 +237,6 @@ export default function App() {
           {gameState === 'draw' && "It's a draw!"}
         </div>
       )}
-
-      <PerformancePanel stats={performanceStats} />
 
       {gameState !== 'idle' && (
         <footer className="game-footer">
@@ -278,6 +270,7 @@ export default function App() {
               <span className="theme-toggle-label">{theme === 'dark' ? 'Light' : 'Dark'}</span>
             </button>
           </div>
+          <p className="creator-credit">Made by Kiro D. Basanal</p>
         </footer>
       )}
 

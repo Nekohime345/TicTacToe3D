@@ -1,4 +1,6 @@
 let audioContext
+let masterGain
+let limiter
 
 function getAudioContext() {
   if (typeof window === 'undefined') return null
@@ -6,7 +8,19 @@ function getAudioContext() {
   const AudioContextClass = window.AudioContext ?? window.webkitAudioContext
   if (!AudioContextClass) return null
 
-  audioContext ??= new AudioContextClass()
+  if (!audioContext) {
+    audioContext = new AudioContextClass()
+    masterGain = audioContext.createGain()
+    masterGain.gain.value = 1.12
+    limiter = audioContext.createDynamicsCompressor()
+    limiter.threshold.value = -3
+    limiter.knee.value = 0
+    limiter.ratio.value = 12
+    limiter.attack.value = 0.003
+    limiter.release.value = 0.12
+    masterGain.connect(limiter)
+    limiter.connect(audioContext.destination)
+  }
   if (audioContext.state === 'suspended') audioContext.resume()
   return audioContext
 }
@@ -23,9 +37,31 @@ function playTone(context, { frequency, startTime, duration, volume, type = 'sin
   gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration)
 
   oscillator.connect(gain)
-  gain.connect(context.destination)
+  gain.connect(masterGain)
   oscillator.start(startTime)
   oscillator.stop(startTime + duration + 0.01)
+}
+
+function playNoiseImpact(context, startTime) {
+  const buffer = context.createBuffer(1, Math.floor(context.sampleRate * 0.16), context.sampleRate)
+  const samples = buffer.getChannelData(0)
+  for (let index = 0; index < samples.length; index += 1) {
+    samples[index] = (Math.random() * 2 - 1) * (1 - index / samples.length)
+  }
+
+  const source = context.createBufferSource()
+  const filter = context.createBiquadFilter()
+  const gain = context.createGain()
+  source.buffer = buffer
+  filter.type = 'lowpass'
+  filter.frequency.setValueAtTime(1100, startTime)
+  gain.gain.setValueAtTime(0.0001, startTime)
+  gain.gain.exponentialRampToValueAtTime(0.2, startTime + 0.006)
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.15)
+  source.connect(filter)
+  filter.connect(gain)
+  gain.connect(masterGain)
+  source.start(startTime)
 }
 
 export function playBoardEntranceSound() {
@@ -103,21 +139,32 @@ export function playDrawSound() {
   if (!context) return
 
   const startTime = context.currentTime + 0.02
+  // A hollow, descending impact gives the draw its own character, separate
+  // from the rising three-note victory fanfare.
   playTone(context, {
-    frequency: 105,
-    endFrequency: 38,
+    frequency: 145,
+    endFrequency: 48,
     startTime,
-    duration: 0.58,
-    volume: 0.32,
+    duration: 0.72,
+    volume: 0.34,
     type: 'sine',
   })
   playTone(context, {
-    frequency: 260,
-    endFrequency: 70,
-    startTime: startTime + 0.025,
-    duration: 0.32,
-    volume: 0.12,
+    frequency: 390,
+    endFrequency: 155,
+    startTime: startTime + 0.015,
+    duration: 0.46,
+    volume: 0.13,
     type: 'triangle',
   })
+  playTone(context, {
+    frequency: 310,
+    endFrequency: 185,
+    startTime: startTime + 0.07,
+    duration: 0.38,
+    volume: 0.09,
+    type: 'sine',
+  })
+  playNoiseImpact(context, startTime)
 }
 
