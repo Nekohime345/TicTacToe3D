@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 
-export default function CameraSettings({ settings, transitionKey }) {
+function CameraSettings({ settings, transitionKey }) {
   const { camera } = useThree()
   const transitionRef = useRef(null)
   const previousTransitionKey = useRef(transitionKey)
@@ -50,3 +50,5 @@ export default function CameraSettings({ settings, transitionKey }) {
 
   return null
 }
+
+export default CameraSettings

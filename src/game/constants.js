@@ -10,7 +10,7 @@ export const INITIAL_ZOOM = 1.59
 export const PLAY_CAMERA = {
   position: [0, 9, 2.2],
   rotation: [-76, 0, 0],
-  zoom: 1.59,
+  zoom: 1,
 }
 
 export const SAMPLE_MARKS = { 3: 'X', 5: 'O' }
