@@ -92,6 +92,20 @@
   transform: translateX(-50%);
 }
 
+@media (min-width: 481px) and (max-width: 900px) {
+  .game-screen-in-game .game-heading {
+    width: min(500px, calc(100vw - 3rem));
+  }
+
+  .game-screen-in-game .game-heading h1 {
+    font-size: clamp(2.5rem, 5.4vw, 3.5rem);
+  }
+
+  .game-screen-in-game .game-status {
+    top: max(7rem, calc(env(safe-area-inset-top) + 6rem));
+  }
+}
+
 .game-controls {
   display: flex;
   align-items: center;
@@ -406,7 +420,9 @@
 
   .game-screen-in-game .game-status {
     top: max(6.5rem, calc(env(safe-area-inset-top) + 6rem));
+    left: max(0.75rem, env(safe-area-inset-left));
     font-size: 0.95rem;
+    transform: none;
   }
 
   .game-screen:not(.game-screen-in-game) .game-footer {

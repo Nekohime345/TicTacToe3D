@@ -16,13 +16,23 @@ import './App.css'
 
 const emptyBoard = () => Array(9).fill(null)
 const initialPerformanceStats = { fps: 0, frameTime: 0, calls: 0, triangles: 0 }
-const getResponsivePlayZoom = () => Math.max(0.7, Math.min(1.2, ((window.innerHeight || 700) - 150) / 420))
+const getResponsivePlayZoom = () => Math.max(
+  0.65,
+  Math.min(
+    1.2,
+    ((window.innerHeight || 700) - 150) / 420,
+    ((window.innerWidth || 375) / 500) * 1.2,
+  ),
+)
 
 export default function App() {
-  const [cameraSettings, setCameraSettings] = useState({ ...INITIAL_CAMERA, zoom: INITIAL_ZOOM })
+  const initialGameState = window.innerWidth <= 900 ? 'playing' : 'idle'
+  const [cameraSettings, setCameraSettings] = useState(() => initialGameState === 'idle'
+    ? { ...INITIAL_CAMERA, zoom: INITIAL_ZOOM }
+    : { ...PLAY_CAMERA, zoom: getResponsivePlayZoom() })
   const [marks, setMarks] = useState(emptyBoard)
   const [currentPlayer, setCurrentPlayer] = useState('X')
-  const [gameState, setGameState] = useState('idle')
+  const [gameState, setGameState] = useState(initialGameState)
   const [winner, setWinner] = useState(null)
   const [boardAnimationKey, setBoardAnimationKey] = useState(0)
   const [lastMove, setLastMove] = useState(null)
