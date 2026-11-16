@@ -1,16 +1,34 @@
-# React + Vite
+# Tic Tac Toe 3D
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A responsive, two-player tic-tac-toe game built with React, Vite, and React Three Fiber.
 
-Currently, two official plugins are available:
+## Getting started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```sh
+npm install
+npm run dev
+```
 
-## React Compiler
+Open the local URL printed by Vite. Use **Play** to start a round. Players take turns selecting squares; **New Game** resets the board. The camera editor and performance panel are available on screen.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Project layout
 
-## Expanding the ESLint configuration
+```text
+src/
+  components/
+    board/       3D board, cells, and X/O marks
+    scene/       Camera animation and WebGL performance sampling
+    ui/          Camera editor and performance display
+  game/          Board constants and tic-tac-toe rules
+  App.jsx        Game state and top-level scene/UI composition
+  App.css        Game and interface styles
+  index.css      Global page reset and root sizing
+  main.jsx       React entry point
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Scripts
+
+- `npm run dev` starts the local development server.
+- `npm run build` creates the production bundle in `dist/`.
+- `npm run preview` serves the production bundle locally.
+- `npm run lint` checks the source with ESLint.

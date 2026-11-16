@@ -1,122 +1,115 @@
+import { Canvas } from '@react-three/fiber'
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import Board from './components/board/Board.jsx'
+import CameraPanel from './components/ui/CameraPanel.jsx'
+import PerformancePanel from './components/ui/PerformancePanel.jsx'
+import CameraSettings from './components/scene/CameraSettings.jsx'
+import PerformanceSampler from './components/scene/PerformanceSampler.jsx'
+import { INITIAL_CAMERA, INITIAL_ZOOM, PLAY_CAMERA } from './game/constants.js'
+import { findWinner, isBoardFull } from './game/gameLogic.js'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const emptyBoard = () => Array(9).fill(null)
+const initialPerformanceStats = { fps: 0, frameTime: 0, calls: 0, triangles: 0 }
+
+export default function App() {
+  const [cameraSettings, setCameraSettings] = useState({ ...INITIAL_CAMERA, zoom: INITIAL_ZOOM })
+  const [marks, setMarks] = useState(emptyBoard)
+  const [currentPlayer, setCurrentPlayer] = useState('X')
+  const [gameState, setGameState] = useState('idle')
+  const [winner, setWinner] = useState(null)
+  const [boardAnimationKey, setBoardAnimationKey] = useState(0)
+  const [lastMove, setLastMove] = useState(null)
+  const [cameraTransitionKey, setCameraTransitionKey] = useState(0)
+  const [performanceStats, setPerformanceStats] = useState(initialPerformanceStats)
+
+  const startNewGame = () => {
+    setMarks(emptyBoard())
+    setCurrentPlayer('X')
+    setWinner(null)
+    setGameState('playing')
+    setCameraSettings(PLAY_CAMERA)
+    setBoardAnimationKey((key) => key + 1)
+    setCameraTransitionKey((key) => key + 1)
+    setLastMove(null)
+  }
+
+  const playCell = (cell) => {
+    if (gameState !== 'playing' || marks[cell]) return
+
+    const nextMarks = [...marks]
+    nextMarks[cell] = currentPlayer
+    setMarks(nextMarks)
+    setLastMove((previous) => ({ cell, key: (previous?.key ?? 0) + 1 }))
+
+    const nextWinner = findWinner(nextMarks)
+    if (nextWinner) {
+      setWinner(nextWinner)
+      setGameState('won')
+    } else if (isBoardFull(nextMarks)) {
+      setGameState('draw')
+    } else {
+      setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X')
+    }
+  }
+
+  const updateCamera = (group, axis, value) => {
+    const key = group === 'Position' ? 'position' : 'rotation'
+    setCameraSettings((current) => ({
+      ...current,
+      [key]: current[key].map((currentValue, index) => index === axis ? value : currentValue),
+    }))
+  }
+
+  const resetCamera = () => {
+    setCameraSettings(gameState === 'idle' ? { ...INITIAL_CAMERA, zoom: INITIAL_ZOOM } : PLAY_CAMERA)
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="game-screen" aria-label="3D tic-tac-toe game">
+      <Canvas shadows dpr={[1, 2]} camera={{ position: INITIAL_CAMERA.position, fov: 42 }} gl={{ antialias: true }}>
+        <CameraSettings settings={cameraSettings} transitionKey={cameraTransitionKey} />
+        <PerformanceSampler onUpdate={setPerformanceStats} />
+        <color attach="background" args={['#8ed8ff']} />
+        <fog attach="fog" args={['#8ed8ff', 12, 24]} />
+        <ambientLight intensity={1.5} />
+        <directionalLight castShadow position={[4, 8, 5]} intensity={2.4} shadow-mapSize={1024} />
+        <Board
+          marks={marks}
+          gameActive={gameState !== 'idle'}
+          animationKey={boardAnimationKey}
+          lastMove={lastMove}
+          onCellClick={playCell}
+        />
+      </Canvas>
+
+      <header className="game-heading">
+        <h1>Tic Tac Toe 3D</h1>
+        <p>A classic game in a whole new dimension.</p>
+      </header>
+
+      {gameState !== 'idle' && (
+        <div className="game-status" aria-live="polite">
+          {gameState === 'playing' && <><span className={`turn-mark turn-${currentPlayer.toLowerCase()}`}>{currentPlayer}</span>'s turn</>}
+          {gameState === 'won' && <><span className={`turn-mark turn-${winner.toLowerCase()}`}>{winner}</span> wins!</>}
+          {gameState === 'draw' && "It's a draw!"}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+      )}
+
+      <CameraPanel
+        settings={cameraSettings}
+        onChange={updateCamera}
+        onZoomChange={(zoom) => setCameraSettings((current) => ({ ...current, zoom }))}
+        onReset={resetCamera}
+      />
+      <PerformancePanel stats={performanceStats} />
+
+      <footer className="game-footer">
+        <button className="play-button" type="button" onClick={startNewGame}>
+          <span aria-hidden="true">{'\u25b6'}</span>
+          {gameState === 'idle' ? 'Play' : 'New Game'}
         </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      </footer>
+    </main>
   )
 }
-
-export default App
